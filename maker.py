@@ -1,4 +1,6 @@
 import re
+import subprocess
+import sys
 from urllib.parse import urlparse, parse_qs
 
 import yt_dlp
@@ -54,6 +56,19 @@ def pedir_url_video():
             return url
         print("❌ That doesn't look like a valid YouTube URL. Please try again.")
         print("Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+
+def abrir_preview_video(video_path):
+    try:
+        if os.name == "nt":
+            os.startfile(video_path)
+        elif sys.platform == "darwin":
+            subprocess.run(["open", video_path], check=False)
+        else:
+            subprocess.run(["xdg-open", video_path], check=False)
+        print(f"📽️ Preview opened for: {video_path}")
+    except Exception as exc:
+        print(f"⚠️ Could not open the preview automatically: {exc}")
 
 
 def descargar_video(url):
@@ -125,18 +140,23 @@ def main():
     os.remove(video_path)
     print(f"🎉 Video ready: {NOMBRE_SALIDA}!")
 
-    auto_upload = os.getenv("YOUTUBE_AUTO_UPLOAD", "false").strip().lower() in {"1", "true", "yes", "on"}
-    if auto_upload:
-        print("Uploading Short to YouTube...")
-        video_id = upload_video(
-            video_path=NOMBRE_SALIDA,
-            title=clip_data.get("title") or "AI-generated Short",
-            description=os.getenv("YOUTUBE_DESCRIPTION", "").strip(),
-            privacy_status=os.getenv("YOUTUBE_PRIVACY_STATUS", "private").strip().lower(),
-            category_id=os.getenv("YOUTUBE_VIDEO_CATEGORY_ID", "22").strip(),
-            client_secrets_file=os.getenv("YOUTUBE_CLIENT_SECRETS_FILE", "client_secret.json").strip(),
-        )
-        print(f"🎉 Uploaded: https://www.youtube.com/watch?v={video_id}")
+    abrir_preview_video(NOMBRE_SALIDA)
+    publicar = input("Do you want to post this video to YouTube? (y/n): ").strip().lower()
+
+    if publicar not in {"y", "yes"}:
+        print("No upload requested. Your short was saved locally as short_con_subs.mp4.")
+        return
+
+    print("Uploading Short to YouTube...")
+    video_id = upload_video(
+        video_path=NOMBRE_SALIDA,
+        title=clip_data.get("title") or "AI-generated Short",
+        description=os.getenv("YOUTUBE_DESCRIPTION", "").strip(),
+        privacy_status=os.getenv("YOUTUBE_PRIVACY_STATUS", "private").strip().lower(),
+        category_id=os.getenv("YOUTUBE_VIDEO_CATEGORY_ID", "22").strip(),
+        client_secrets_file=os.getenv("YOUTUBE_CLIENT_SECRETS_FILE", "client_secret.json").strip(),
+    )
+    print(f"🎉 Uploaded: https://www.youtube.com/watch?v={video_id}")
 
 if __name__ == "__main__":
     main()
