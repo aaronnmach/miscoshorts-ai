@@ -1,3 +1,6 @@
+import re
+from urllib.parse import urlparse, parse_qs
+
 import yt_dlp
 from moviepy import VideoFileClip
 import os
@@ -11,8 +14,47 @@ from youtube_uploader import upload_video
 
 warnings.filterwarnings("ignore")
 
-URL_VIDEO = "https://youtu.be/KzOuAXYLJFc?si=2mh8loD5H1zSTNnG"
+URL_VIDEO = "https://youtu.be/PxBx_ZgKJUQ?si=qbI8PYdVJbVYG_Dn"
 NOMBRE_SALIDA = "short_con_subs.mp4"
+
+
+def validar_url_youtube(url):
+    if not url or not isinstance(url, str):
+        return False
+
+    url = url.strip()
+    if not url:
+        return False
+
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    if not host:
+        return False
+
+    valid_hosts = {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"}
+    if host not in valid_hosts and not host.endswith(".youtube.com"):
+        return False
+
+    if host == "youtu.be":
+        return bool(parsed.path and parsed.path != "/")
+
+    path = parsed.path.lower()
+    if path.startswith("/watch"):
+        query = parse_qs(parsed.query)
+        return bool(query.get("v"))
+    if path.startswith(("/shorts/", "/embed/", "/live/")):
+        return bool(parsed.path.strip("/"))
+    return False
+
+
+def pedir_url_video():
+    while True:
+        url = input("Paste a YouTube video URL: ").strip() or URL_VIDEO
+        if validar_url_youtube(url):
+            return url
+        print("❌ That doesn't look like a valid YouTube URL. Please try again.")
+        print("Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
 
 def descargar_video(url):
     print(f"📥 Downloading video: {url}...")
@@ -33,13 +75,14 @@ def parsear_respuesta_gemini(texto):
     return datos
 
 def main():
-    video_path = descargar_video(URL_VIDEO)
+    url_video = pedir_url_video()
+    video_path = descargar_video(url_video)
     
     print("🔍 Transcribing audio to get timestamps...")
     model = whisper.load_model("base")
     resultado = model.transcribe(video_path)
     with open("transcripcion_completa.txt", "w", encoding="utf-8") as f:
-        f.write(f"URL: {URL_VIDEO}\n")
+        f.write(f"URL: {url_video}\n")
         f.write(resultado['text'])  
     
     analisis = cerebro.encontrar_clip_viral(resultado['segments'])
