@@ -1,3 +1,4 @@
+import argparse
 import re
 import subprocess
 import sys
@@ -58,6 +59,22 @@ def pedir_url_video():
         print("Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
 
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Generate a Shorts clip from a YouTube video and optionally upload it.")
+    parser.add_argument("--url", help="YouTube video URL to process")
+    parser.add_argument("--title", help="Override the AI-generated title before upload")
+    parser.add_argument(
+        "--privacy",
+        choices=["private", "unlisted", "public"],
+        help="Set the YouTube privacy status before uploading",
+    )
+    parser.add_argument("--upload", dest="upload", action="store_true", help="Upload the final clip to YouTube")
+    parser.add_argument("--no-upload", dest="upload", action="store_false", help="Skip the upload step")
+    parser.add_argument("--dry-run", action="store_true", help="Generate the clip and preview it without uploading")
+    parser.set_defaults(upload=None)
+    return parser.parse_args(argv)
+
+
 def abrir_preview_video(video_path):
     try:
         if os.name == "nt":
@@ -89,8 +106,9 @@ def parsear_respuesta_gemini(texto):
         if "REASON:" in line: datos['reason'] = line.split("REASON:")[1].strip()
     return datos
 
-def main():
-    url_video = pedir_url_video()
+def main(argv=None):
+    args = parse_args(argv)
+    url_video = args.url or pedir_url_video()
     video_path = descargar_video(url_video)
     
     print("🔍 Transcribing audio to get timestamps...")
@@ -141,18 +159,44 @@ def main():
     print(f"🎉 Video ready: {NOMBRE_SALIDA}!")
 
     abrir_preview_video(NOMBRE_SALIDA)
-    publicar = input("Do you want to post this video to YouTube? (y/n): ").strip().lower()
 
-    if publicar not in {"y", "yes"}:
-        print("No upload requested. Your short was saved locally as short_con_subs.mp4.")
+    final_title = args.title or clip_data.get("title") or "AI-generated Short"
+    if not args.title:
+        custom_title = input("Edit title before uploading (press Enter to keep current title): ").strip()
+        if custom_title:
+            final_title = custom_title
+
+    env_privacy = os.getenv("YOUTUBE_PRIVACY_STATUS", "private").strip().lower()
+    privacy_status = args.privacy or env_privacy
+    if args.privacy is None:
+        custom_privacy = input(f"Choose privacy status [private/unlisted/public] [{privacy_status}]: ").strip().lower()
+        if custom_privacy in {"private", "unlisted", "public"}:
+            privacy_status = custom_privacy
+
+    upload_default = args.upload
+    if upload_default is None:
+        upload_default = os.getenv("YOUTUBE_AUTO_UPLOAD", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if args.dry_run:
+        print("Dry run enabled: preview created, upload skipped.")
+        print(f"Would upload: {final_title} | privacy={privacy_status}")
+        return
+
+    user_wants_upload = input(
+        f"Do you want to post this video to YouTube? ({'Y/n' if upload_default else 'y/N'}): "
+    ).strip().lower()
+    if user_wants_upload == "":
+        user_wants_upload = "y" if upload_default else "n"
+
+    if user_wants_upload not in {"y", "yes"}:
+        print(f"No upload requested. Your short was saved locally as {NOMBRE_SALIDA}.")
         return
 
     print("Uploading Short to YouTube...")
     video_id = upload_video(
         video_path=NOMBRE_SALIDA,
-        title=clip_data.get("title") or "AI-generated Short",
+        title=final_title,
         description=os.getenv("YOUTUBE_DESCRIPTION", "").strip(),
-        privacy_status=os.getenv("YOUTUBE_PRIVACY_STATUS", "private").strip().lower(),
+        privacy_status=privacy_status,
         category_id=os.getenv("YOUTUBE_VIDEO_CATEGORY_ID", "22").strip(),
         client_secrets_file=os.getenv("YOUTUBE_CLIENT_SECRETS_FILE", "client_secret.json").strip(),
     )
