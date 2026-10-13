@@ -2,7 +2,7 @@ from moviepy import TextClip, CompositeVideoClip
 from moviepy.video.tools.subtitles import SubtitlesClip
 
 def generar_subtitulos(video_clip, segmentos_whisper, tiempo_inicio_recorte):
-    print("📝 Generando capas de subtítulos...")
+    print("📝 Generating subtitle overlays...")
 
     subs = []
     for segmento in segmentos_whisper:
@@ -16,7 +16,7 @@ def generar_subtitulos(video_clip, segmentos_whisper, tiempo_inicio_recorte):
             subs.append(((start, end), texto))
 
     estilo_texto = lambda txt: TextClip(text=txt, 
-                                        font='DejaVuSans-Bold', 
+                                        font='/System/Library/Fonts/Supplemental/Arial Bold.ttf',
                                         font_size=35, 
                                         color='yellow', 
                                         stroke_color='black', 

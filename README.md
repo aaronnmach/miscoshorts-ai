@@ -17,6 +17,7 @@ Automatically creates viral YouTube Shorts from long-form videos using AI analys
 - Python 3.12+
 - FFmpeg (required by moviepy)
 - Google Gemini API key
+- YouTube Data API v3 OAuth client (optional, for automatic uploads)
 
 ## Installation
 
@@ -45,7 +46,10 @@ brew install ffmpeg
 
 4. Set up your Google Gemini API key:
    - Get an API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-   - Update the `GEMINI_API_KEY` variable in `cerebro_gemini.py`
+   - If `.env` does not exist, copy `.env.example` to `.env`. If it already exists, keep it and add the required settings:
+```bash
+GEMINI_API_KEY=your-api-key
+```
 
 ## Usage
 
@@ -60,9 +64,20 @@ python maker.py
    - Transcribe the audio
    - Ask Gemini to suggest the best viral segment
    - Show you the suggestion with title, timestamps, and reasoning
-   - Ask for confirmation (press 's' to accept or provide custom timestamps)
+   - Ask for confirmation (press 'y' to accept or provide custom timestamps)
    - Generate the vertical Short with subtitles
    - Save as `short_con_subs.mp4`
+   - Upload automatically if `YOUTUBE_AUTO_UPLOAD=true` is set in `.env`
+
+### YouTube Upload Setup
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create or select a project and enable **YouTube Data API v3**.
+2. Configure the OAuth consent screen (add your Google account as a test user if the app is in testing), then create an OAuth client ID with application type **Desktop app**.
+3. Download the OAuth JSON file as `client_secret.json` in the project directory. This file and the saved `youtube_token.json` are ignored by Git.
+4. In `.env`, set `YOUTUBE_AUTO_UPLOAD=true`. Upload privacy defaults to `private`; change `YOUTUBE_PRIVACY_STATUS` to `unlisted` or `public` only when you want that visibility.
+5. Run the script. On the first upload, a browser window opens for YouTube authorization. The upload then uses the Gemini-generated title and the optional `YOUTUBE_DESCRIPTION`.
+
+Set `YOUTUBE_AUTO_UPLOAD=false` to create videos without uploading. You can also configure `YOUTUBE_VIDEO_CATEGORY_ID` and `YOUTUBE_CLIENT_SECRETS_FILE` in `.env`.
 
 ## Configuration
 
@@ -70,6 +85,9 @@ python maker.py
 Edit these variables in `maker.py`:
 - `URL_VIDEO`: YouTube video URL to process
 - `NOMBRE_SALIDA`: Output filename (default: "short_con_subs.mp4")
+- `YOUTUBE_AUTO_UPLOAD`: Automatically upload after rendering (default: `false`)
+- `YOUTUBE_PRIVACY_STATUS`: Upload visibility: `private` (default), `unlisted`, or `public`
+- `YOUTUBE_DESCRIPTION`: Optional YouTube description
 
 ### Subtitle Styling
 Edit subtitle appearance in `subtitulos.py`:
@@ -135,17 +153,18 @@ miscoshorts/
 - `yt-dlp`: YouTube video downloading
 - `openai-whisper`: Audio transcription
 - `moviepy`: Video editing and processing
-- `google-generativeai`: Gemini AI API
+- `google-genai`: Gemini AI API
+- `google-api-python-client` and `google-auth-oauthlib`: Optional YouTube uploads
 - `torch`: Deep learning (Whisper dependency)
 - `PIL`: Image processing (MoviePy dependency)
 
 ## Author / Resources
 
-Si este código te ha servido, profundizar en la lógica detrás de la IA es lo que te diferenciará como ingeniero. Echa un vistazo a mis libros:
+If this project has been useful, explore the ideas behind the AI to deepen your engineering skills. Check out my books:
 
 - 📖 Explora la Inteligencia Artificial: https://amzn.eu/d/dSwYhue
 - 💻 Programar con Inteligencia Artificial: https://amzn.eu/d/eK4f73N
-- Canal de YouTube: https://www.youtube.com/@jokioki?sub_confirmation=1
+- YouTube channel: https://www.youtube.com/@jokioki?sub_confirmation=1
 
 
 ## License

@@ -109,6 +109,8 @@ cython_debug/
 *.key
 *.pem
 config.py
+client_secret*.json
+youtube_token.json
 
 # Model files (large)
 *.bin
